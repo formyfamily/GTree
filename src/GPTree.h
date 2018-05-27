@@ -8,6 +8,7 @@
 #include<fstream>
 #include<algorithm>
 #include<map>
+#include<queue>
 #include<cmath>
 #include<queue>
 #include<sys/time.h>
@@ -46,4 +47,7 @@ int search_catch(int S,int T) ;//带 cache 的两点最短路,速度慢于 searc
 int find_path(int S,int T,std::vector<int> &order) ;//返回 S-T 最短路长度,并将沿途经过的结点存储到 order 数组中
 
 int Gn() ;
+int Gm() ;
 int Grealnode() ;
+double Euclidean_Dist(int S, int T) ;
+double Distance_(double a1, double b1, double a2, double b2) ;

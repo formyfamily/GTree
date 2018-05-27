@@ -14,8 +14,47 @@ long long ts, te;
 
 using namespace std ;
 
-#define MAXP 400005 
+#define MAXP 500005 
+int pointCnt ;
 double px[MAXP], py[MAXP] ;
+
+int w, m ;
+int st[MAXP], eL[MAXP*2], eN[MAXP*2], eY[MAXP*2] ;
+priority_queue< pair<int, int> > heap ;
+int dis[MAXP], dS[MAXP], dT[MAXP], vis[MAXP] ;
+void add(int x, int y, int dis)
+{
+    w++ ;
+    eN[w] = st[x], st[x] = w ;
+    eY[w] = y, eL[w] = dis ;
+}
+
+void dijekstra(int x)
+{
+    for(int i = 0; i < pointCnt; i ++) 
+        dis[i] = 0x7fffffff, vis[i] = 0 ;
+    dis[x] = 0 ;
+    heap.push(make_pair(-dis[x], x)) ;
+    int cnt = 0 ;
+    while(!heap.empty())
+    {
+        cnt ++ ;
+        do {
+            x = heap.top().second ;
+            heap.pop() ;
+        } while(vis[x]) ;
+        vis[x] = 1 ;
+        for(int i = st[x]; i; i = eN[i])
+        {
+            int tmp = eY[i] ;
+            if(dis[tmp] > dis[x]+eL[i]) 
+            {
+                dis[tmp] = dis[x]+eL[i] ;
+                heap.push(make_pair(-dis[tmp], tmp)) ;
+            }
+        }
+    }
+}
 
 void graphInit()
 {
@@ -25,7 +64,7 @@ void graphInit()
 
 	TIME_TICK_START
         init();
-        FILE* dataFile, *nodeFile ;
+        FILE* dataFile, *nodeFile, *edgeFile ;
         if((dataFile=fopen("data//GP_Tree.data","r"))!=NULL)
         {
             printf("GP_Tree.data already exist, loading...\n") ;
@@ -48,6 +87,15 @@ void graphInit()
         double x, y ;
         while(fscanf(nodeFile, "%d %lf %lf", &idx, &x, &y) > 0)
             px[idx] = x, py[idx] = y ;
+        pointCnt = idx+1 ;        
+        edgeFile=fopen("data//road.nedge", "r") ;
+        int xx, yy, dt ;
+        fscanf(edgeFile, "%d %d", &xx, &m) ;
+        for(int i = 0; i < m; i ++)
+        {
+            fscanf(edgeFile, "%d %d %d", &xx, &yy, &dt) ;
+            add(xx, yy, dt), add(yy, xx, dt) ;
+        }
     TIME_TICK_END
 	TIME_TICK_PRINT("Build")
 
@@ -55,11 +103,23 @@ void graphInit()
     TIME_TICK_START
         for(int i=0;i<10000;i++)
         {
-            if(i % 1000 == 0)
-                printf("%d\n", i) ;
+            //if(i % 1000 == 0)
+            //    printf("%d\n", i) ;
             int S=rand()%Gn();
             int T=rand()%Gn();
             int dis=search(S,T);
+        }        
+        for(int i=0;i<5;i++)
+        {
+            int S=rand()%Gn();
+            dijekstra(S) ;
+            //printf("%d\n", i) ;
+            for(int j = 0; j < 10000; j ++)
+            {
+                int T=rand()%Gn();
+                if(dis[T] != search(T, S))
+                    printf("Wrong! %d %d\n", dis[T], search(T, S)) ;
+            }
         }
     TIME_TICK_END
     TIME_TICK_PRINT("Test")
@@ -103,7 +163,7 @@ int driveTimeFast(int car, int deep, int current, int mxDist)
     for(int i = 0; i < paNum(car); i ++)
         if(!arrived[i]) 
         {
-            int tmp = (deep ? dist[car][current][i] : search(passenger[car][i], current)) ;
+            int tmp = (deep ? dist[car][current][i] : dS[passenger[car][i]]) ;
             if(mxDist < tmp) continue ;
             arrived[i] = 1 ;
             tmp = tmp+driveTimeFast(car, deep+1, i, mxDist-tmp) ;
@@ -124,7 +184,7 @@ int driveTimeReallyFast(int car, int deep, int current, int mxDist)
     for(int i = 0; i < paNum(car); i ++)
         if(!arrived[i]) 
         {
-            int tmp = (deep ? dist[car][current][i] : search(passenger[car][i], current)) ;
+            int tmp = (deep ? dist[car][current][i] : dS[passenger[car][i]]) ;
             if(tmp < mn) mn = tmp, best = i ;
         }    
     if(mn > mxDist) return mxDist+1000 ;
@@ -162,7 +222,7 @@ void carInit()
             fscanf(carFile, "%lf,%lf,%d", &x, &y, &position) ;
             passenger[carNum].push_back(position) ;
         }
-        avaliable[carNum] = (passengerNum < 4) ;
+        avaliable[carNum] = passengerNum ;
         for(int i = 0; i < passengerNum; i ++)
             for(int j = i+1; j < passengerNum; j ++)
             {
@@ -180,7 +240,7 @@ void carInit()
         }
         else fscanf(D1File, "%d", &D1[carNum]) ;
         cars[carNum ++] = carNum ;
-        if(carNum %1000 == 0) printf("%d\n", carNum) ;
+        //if(carNum %1000 == 0) printf("%d\n", carNum) ;
     }
     random_shuffle(cars, cars+carNum) ;
     printf("Cars input finished...\n") ;
@@ -189,7 +249,15 @@ void carInit()
 
 double rawDist(int a, int b)
 {
-    return sqrt((px[a]-px[b])*(px[a]-px[b])+(py[a]-py[b])*(py[a]-py[b]))*100*1000 ;
+    double dt = Distance_(px[a], py[a], px[b], py[b]) ;
+    //printf("Distance: %lf\n", dt) ;
+    return dt ;
+}
+
+int w1[MAXP], w2[MAXP], retOrder[MAXP][5] ;
+bool cmp(int a, int b)
+{
+    return (w1[a]+w2[a]) < (w1[b]+w2[b]) ;
 }
 
 int main()
@@ -197,27 +265,58 @@ int main()
     graphInit() ;
     carInit() ;
     printf("Initialization complete.\n") ;
+    fprintf(stderr, "Initialization over.\n") ;
+    fflush(stderr) ; 
 
-    int S, T ;
+    int S, T, iter = 0;
     int start, dest ;
+    char filename[20] ;
+    FILE* inputFile ;
+    printf("inputFile %d\n", inputFile) ;
+    while(true) 
+    {    
+        //printf("---%d\n", iter) ;
+        sprintf(filename, "data//input%d.txt", iter) ;
+        inputFile = fopen(filename, "r") ;
+        if(!inputFile) continue ;
+        if(fscanf(inputFile, "%d %d", &start, &dest) <= 0) {fclose(inputFile); continue ;}
+        fclose(inputFile) ;
+        printf("Get input!\n") ;
+        iter++ ;
+        if(start < 0 || start >= pointCnt || dest < 0 || dest >= pointCnt) 
+        {
+            printf("Wrong input!\n") ;
+            fprintf(stderr, "-1\n") ;
+            fflush(stderr) ;           
+            continue ;
+        }
 
-    while(scanf("%d %d", &start, &dest) > 0) 
-    {
+        printf("Starting a new data... %d %d\n", start, dest) ;
         if(start == -1) break ;
         D4 = search(start, dest) ;
-        int res[1000], w1[1000], w2[1000], cnt = 0, mndist = 100000 ;
+        int res[1000], cnt = 0, mndist = 100000 ;
         int tt = 0, i ;
+
+        printf("Calculating shortest path...\n") ;
+        dijekstra(start) ;
+        for(int i = 0; i < pointCnt; i ++) 
+            dS[i] = dis[i] ;
+        dijekstra(dest) ;
+        for(int i = 0; i < pointCnt; i ++) 
+            dT[i] = dis[i] ;
+            
+        printf("Finding Taxis...\n") ;
         for(int k = 0; k < carNum; k ++)
         {
-            i = cars[k] ;
+            i = k ;
             // if(i %1000 == 0) printf("%d %d %d\n", i, cnt, mndist) ;
-            if(!avaliable[i] || rawDist(start, pos[i]) > 10000) continue ;
+            if(avaliable[i] == 4 || rawDist(start, pos[i]) > 11000) continue ;
             D2 = search(start, pos[i]) ;
-            if(D2 > 10000 || D1[i]-D4 > 10000) continue ;
+            if(D2 > 11000) continue ;
             tt ++ ;
             int t = passenger[i].size() ;
             for(int j = 0; j < t; j ++)
-                dist[i][j][t] = dist[i][t][j] = search(dest, passenger[i][j]) ;
+                dist[i][j][t] = dist[i][t][j] = dT[passenger[i][j]] ;
             passenger[i].push_back(dest) ;
             //D3 = driveTimeFast(i, 0, start, min(10000+D1[i]-D2, 10000+D4)) ;
             D3 = driveTimeFast(i, 0, start, min(10000+D1[i]-D2, 10000+D4)) ;
@@ -225,17 +324,29 @@ int main()
             mndist = min(mndist, max(D2+D3-D1[i], D3-D4)) ;
             if(D2+D3-D1[i] > 10000 || D3-D4 > 10000) continue ;
             //printf("found one! %d, %d %d %d %d\n", passenger[i].size(), D1[i], D2, D3, D4) ;
-            w1[cnt] = D2+D3-D1[i], w2[cnt] = D3-D4 ;
+            w1[i] = D2+D3-D1[i], w2[i] = D3-D4 ;
+            for(int s = 0; s < avaliable[i]+1; s ++)
+                retOrder[i][s] = order[s] ;
             res[cnt++] = i ;
-            if(cnt == 5) break ;
+            //if(cnt == 5) break ;
         }
         //printf("!! %d\n", tt) ;
+        sort(res, res+cnt, cmp) ;
         for(int i = 0; i < cnt; i ++)
         {
             printf("Avaliable car #%d: %d\n", i, res[i]) ;
-            printf("    Cost of other passengers: %d\n", w1[i]) ;
-            printf("    Cost of yourself: %d\n", w2[i]) ;
+            printf("    Cost of other passengers: %d\n", w1[res[i]]) ;
+            printf("    Cost of yourself: %d\n", w2[res[i]]) ;
+            fprintf(stderr, "%d\n", res[i]) ;
+            fprintf(stderr, "%d\n", avaliable[res[i]]) ;
+            fprintf(stderr, "%d %lf %lf %d\n", pos[res[i]], px[pos[res[i]]], py[pos[res[i]]], search(pos[res[i]], start)) ;
+            fprintf(stderr, "%d %d %d %d\n", retOrder[res[i]][0], retOrder[res[i]][1], retOrder[res[i]][2], retOrder[res[i]][3]) ;
+            fprintf(stderr, "%d\n", w1[res[i]]) ;
+            fprintf(stderr, "%d\n", w2[res[i]]) ;
         }
+        fprintf(stderr, "-1\n") ;
+        fprintf(stderr, "%lf %lf\n", px[start], py[start]) ;
+        fflush(stderr) ;            
     }
     return 0 ;
 }

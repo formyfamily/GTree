@@ -1,5 +1,5 @@
 
-CC_FLAGS := -g -L/usr/local/lib/ -lmetis -std=gnu++0x
+CC_FLAGS := -g -L/usr/local/lib/ -lmetis -std=gnu++0x -O2
 CC := g++ 
 
 all: TaxiSearching

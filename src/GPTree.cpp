@@ -2956,4 +2956,5 @@ int search_catch(int S,int T) {return tree.search_catch(S, T) ;};
 int find_path(int S,int T,std::vector<int> &order) {return tree.find_path(S, T, order) ;}
 
 int Gn() {return G.n ;}
+int Gm() {return G.m ;}
 int Grealnode() {return G.real_node() ;}
